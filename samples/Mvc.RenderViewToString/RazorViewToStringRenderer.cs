@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Mvc.RenderViewToString
 {
@@ -20,20 +21,27 @@ namespace Mvc.RenderViewToString
         private IRazorViewEngine _viewEngine;
         private ITempDataProvider _tempDataProvider;
         private IServiceProvider _serviceProvider;
+        private IMemoryCache _cache;
 
         public RazorViewToStringRenderer(
             IRazorViewEngine viewEngine,
             ITempDataProvider tempDataProvider,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IMemoryCache cache)
         {
             _viewEngine = viewEngine;
             _tempDataProvider = tempDataProvider;
             _serviceProvider = serviceProvider;
+            _cache = cache;
         }
 
-        public async Task<string> RenderViewToStringAsync<TModel>(string name, TModel model)
+        public async Task<string> RenderViewToStringAsync<TModel>(string template, TModel model)
         {
             var actionContext = GetActionContext();
+
+            //add the template to the cache
+            var name = Guid.NewGuid().ToString();
+            _cache.Set(name, template);
 
             var viewEngineResult = _viewEngine.FindView(actionContext, name, false);
 
