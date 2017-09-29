@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.ObjectPool;
 using Microsoft.Extensions.PlatformAbstractions;
+using Microsoft.Extensions.Options;
 
 namespace Mvc.RenderViewToString
 {
@@ -36,7 +37,6 @@ namespace Mvc.RenderViewToString
             services.AddSingleton<EmailReportGenerator>();
 
             var serviceProvider = services.BuildServiceProvider();
-            ServiceProviderProvider.ServiceProvider = serviceProvider;
             return serviceProvider.GetRequiredService<RazorViewToStringRenderer>();
         }
 
@@ -87,22 +87,18 @@ namespace Mvc.RenderViewToString
         private static void ConfigureDefaultServices(IServiceCollection services, string customApplicationBasePath)
         {
             var applicationEnvironment = PlatformServices.Default.Application;
-            IFileProvider fileProvider = new CacheFileProvider();
             services.AddSingleton<IHostingEnvironment>(new HostingEnvironment
             {
                 ApplicationName =  applicationEnvironment.ApplicationName,
-                WebRootFileProvider = fileProvider,
-            });
-            services.Configure<RazorViewEngineOptions>(options =>
-            {
-                options.FileProviders.Clear();
-                options.FileProviders.Add(fileProvider);
             });
             var diagnosticSource = new DiagnosticListener("Microsoft.AspNetCore");
             services.AddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
             services.AddSingleton<DiagnosticSource>(diagnosticSource);
             services.AddLogging();
             services.AddMvc();
+            services.AddTransient<IConfigureOptions<RazorViewEngineOptions>, CacheFileProviderOptions>();
+            services.AddSingleton<ICacheFileProvider, CacheFileProvider>(); // Use a custom marker interface so you aren't conflating it with random IFileProvider instances in the DI
+            services.AddSingleton<ICacheFileInfo, CacheFileInfo>(); // Use a custom marker interface so you aren't conflating it with random IFileInfo instances in the DI
             services.AddTransient<RazorViewToStringRenderer>();
         }
     }

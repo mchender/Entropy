@@ -8,17 +8,17 @@ using System.Text;
 namespace Mvc.RenderViewToString
 {
     //inspired by https://github.com/mikebrind/RazorEngineViewOptionsFileProviders/blob/master/RazorEngineViewOptionsFileProviders/src/RazorEngineViewOptionsFileProviders/DatabaseFileInfo.cs
-    public class CacheFileInfo : IFileInfo
+    public class CacheFileInfo : ICacheFileInfo
     {
+        private readonly IMemoryCache _cache;
         private string _viewPath;
         private byte[] _viewContent;
         private DateTimeOffset _lastModified;
         private bool _exists;
 
-        public CacheFileInfo(string viewPath)
+        public CacheFileInfo(IMemoryCache cache)
         {
-            _viewPath = viewPath;
-            GetView(viewPath);
+            _cache = cache;
         }
 
         public bool Exists => _exists;
@@ -47,17 +47,20 @@ namespace Mvc.RenderViewToString
             return new MemoryStream(_viewContent);
         }
 
-        private void GetView(string viewName)
+        public void GetView(string viewPath)
         {
+            _viewPath = viewPath;
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(_viewPath);
             if (fileNameWithoutExtension == "_ViewImports")
+            {
+                _exists = false;
                 _viewContent = null;
+            }
             else
             {
                 _lastModified = DateTime.UtcNow;
                 _exists = true;
-                IMemoryCache cache = ServiceProviderProvider.ServiceProvider.GetRequiredService<IMemoryCache>();
-                var template = cache.Get(fileNameWithoutExtension);
+                var template = _cache.Get(fileNameWithoutExtension);
                 _viewContent = Encoding.UTF8.GetBytes(template.ToString());
             }
         }

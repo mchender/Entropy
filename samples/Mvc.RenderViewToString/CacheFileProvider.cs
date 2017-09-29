@@ -5,10 +5,12 @@ using System;
 namespace Mvc.RenderViewToString
 {
     //inspired by https://github.com/mikebrind/RazorEngineViewOptionsFileProviders/blob/master/RazorEngineViewOptionsFileProviders/src/RazorEngineViewOptionsFileProviders/DatabaseFileProvider.cs
-    public class CacheFileProvider : IFileProvider
+    public class CacheFileProvider : ICacheFileProvider
     {
-        public CacheFileProvider()
+        private readonly ICacheFileInfo _fileInfo;
+        public CacheFileProvider(ICacheFileInfo fileInfo)
         {
+            _fileInfo = fileInfo;
         }
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
@@ -17,8 +19,8 @@ namespace Mvc.RenderViewToString
 
         public IFileInfo GetFileInfo(string subpath)
         {
-            var result = new CacheFileInfo(subpath);
-            return result.Exists ? result as IFileInfo : new NotFoundFileInfo(subpath);
+            _fileInfo.GetView(subpath);
+            return _fileInfo.Exists ? _fileInfo as IFileInfo : new NotFoundFileInfo(subpath);
         }
 
         public IChangeToken Watch(string filter)
